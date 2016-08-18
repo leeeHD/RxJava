@@ -368,7 +368,13 @@ public class ObservableTests {
             @Override
             public void onNext(String v) {
                 int num = Integer.parseInt(v);
-                System.out.println(num);
+//            	int num = new Integer(0) ;
+//            	try { // manipulate by customer
+//            		num = Integer.parseInt(v);
+//            	} catch(Exception e){
+//            		System.err.println(e);
+//            	}
+                System.out.println(num); // NumberFormatException
                 // doSomething(num);
                 count.incrementAndGet();
             }
@@ -381,13 +387,13 @@ public class ObservableTests {
         assertEquals(2, count.get());
         assertNotNull(error.get());
         if (!(error.get() instanceof NumberFormatException)) {
-            fail("It should be a NumberFormatException");
+            fail("It should be a NumberFormatException"); // not catch by AtomicObserver
         }
     }
 
     /**
      * The error from the user provided Observer is handled by the subscribe try/catch because this is synchronous
-     * 
+     * add by HD: these 2 test just make me confuse
      * Result: Passes
      */
     @Test
@@ -483,6 +489,7 @@ public class ObservableTests {
     @Test
     public void testPublishLast() throws InterruptedException {
         final AtomicInteger count = new AtomicInteger();
+        // when it connects, it begin to emit values
         ConnectableObservable<String> connectable = Observable.create(new OnSubscribe<String>() {
             @Override
             public void call(final Subscriber<? super String> observer) {
@@ -496,7 +503,7 @@ public class ObservableTests {
                     }
                 }).start();
             }
-        }).takeLast(1).publish();
+        }).takeLast(1).publish();//return a ConnectableObservable
 
         // subscribe once
         final CountDownLatch latch = new CountDownLatch(2);
@@ -504,7 +511,7 @@ public class ObservableTests {
             @Override
             public void call(String value) {
                 assertEquals("last", value);
-                latch.countDown();
+                latch.countDown();//count down, so latch.await() return true
             }
         };
         connectable.subscribe(subscriptionAction);
@@ -513,7 +520,7 @@ public class ObservableTests {
         connectable.subscribe(subscriptionAction);
 
         Subscription subscription = connectable.connect();
-        assertTrue(latch.await(1000, TimeUnit.MILLISECONDS));
+        assertTrue(latch.await(1000, TimeUnit.MILLISECONDS)); // 
         assertEquals(1, count.get());
         subscription.unsubscribe();
     }
@@ -535,14 +542,14 @@ public class ObservableTests {
                     }
                 }).start();
             }
-        }).replay();
+        }).replay(); // @ https://raw.github.com/wiki/ReactiveX/RxJava/images/rx-operators/replay.png
 
         // we connect immediately and it will emit the value
         Subscription s = o.connect();
         try {
 
             // we then expect the following 2 subscriptions to get that same value
-            final CountDownLatch latch = new CountDownLatch(2);
+            final CountDownLatch latch = new CountDownLatch(3);
 
             // subscribe once
             o.subscribe(new Action1<String>() {
@@ -554,6 +561,16 @@ public class ObservableTests {
                 }
             });
 
+            // subscribe again
+            o.subscribe(new Action1<String>() {
+
+                @Override
+                public void call(String v) {
+                    assertEquals("one", v);
+                    latch.countDown();
+                }
+            });
+            
             // subscribe again
             o.subscribe(new Action1<String>() {
 
@@ -590,7 +607,8 @@ public class ObservableTests {
                     }
                 }).start();
             }
-        }).cache();
+        }).cache(); //Observable that subscribes to this Observable lazily
+        		    //cache down and replay
 
         // we then expect the following 2 subscriptions to get that same value
         final CountDownLatch latch = new CountDownLatch(2);
@@ -779,6 +797,7 @@ public class ObservableTests {
     @Test
     public void testOfType() {
         Observable<String> observable = Observable.just(1, "abc", false, 2L).ofType(String.class);
+        //return Observable with specified type
 
         @SuppressWarnings("unchecked")
         Observer<Object> observer = mock(Observer.class);
@@ -882,22 +901,22 @@ public class ObservableTests {
     }
 
     @Test
-            public void testJustWithScheduler() {
-                TestScheduler scheduler = new TestScheduler();
-                Observable<Integer> observable = Observable.from(Arrays.asList(1, 2)).subscribeOn(scheduler);
-        
-                @SuppressWarnings("unchecked")
-                Observer<Integer> observer = mock(Observer.class);
-                observable.subscribe(observer);
-        
-                scheduler.advanceTimeBy(1, TimeUnit.MILLISECONDS);
-        
-                InOrder inOrder = inOrder(observer);
-                inOrder.verify(observer, times(1)).onNext(1);
-                inOrder.verify(observer, times(1)).onNext(2);
-                inOrder.verify(observer, times(1)).onCompleted();
-                inOrder.verifyNoMoreInteractions();
-            }
+    public void testJustWithScheduler() {
+        TestScheduler scheduler = new TestScheduler();
+        Observable<Integer> observable = Observable.from(Arrays.asList(1, 2)).subscribeOn(scheduler);
+
+        @SuppressWarnings("unchecked")
+        Observer<Integer> observer = mock(Observer.class);
+        observable.subscribe(observer);
+
+        scheduler.advanceTimeBy(1, TimeUnit.MILLISECONDS);
+
+        InOrder inOrder = inOrder(observer);
+        inOrder.verify(observer, times(1)).onNext(1);
+        inOrder.verify(observer, times(1)).onNext(2);
+        inOrder.verify(observer, times(1)).onCompleted();
+        inOrder.verifyNoMoreInteractions();
+    }
 
     @Test
     public void testStartWithWithScheduler() {
