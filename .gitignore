@@ -75,3 +75,6 @@ bin/
 
 # IntelliJ / Android Studio related files
 local.properties
+
+# test gitignore
+*.oooo
