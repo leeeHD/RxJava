@@ -902,13 +902,14 @@ public class ObservableTests {
 
     @Test
     public void testJustWithScheduler() {
+    	// TestScheduler test scheduler of events with mock clock
         TestScheduler scheduler = new TestScheduler();
         Observable<Integer> observable = Observable.from(Arrays.asList(1, 2)).subscribeOn(scheduler);
 
         @SuppressWarnings("unchecked")
         Observer<Integer> observer = mock(Observer.class);
         observable.subscribe(observer);
-
+        // Moves the Scheduler's clock forward by a specified amount of time.
         scheduler.advanceTimeBy(1, TimeUnit.MILLISECONDS);
 
         InOrder inOrder = inOrder(observer);
@@ -916,6 +917,43 @@ public class ObservableTests {
         inOrder.verify(observer, times(1)).onNext(2);
         inOrder.verify(observer, times(1)).onCompleted();
         inOrder.verifyNoMoreInteractions();
+        
+        // HD test just with scheduler
+        TestScheduler scheduler1 = new TestScheduler();
+    }
+    
+    @Test
+    public void testTwoAsyncCall() {
+    	Observable<String> observable = Observable.create(new OnSubscribe<String>() {
+            @Override
+            public void call(Subscriber<? super String> Observer) {
+            	
+                Observer.onNext("one");
+                Observer.onCompleted();
+            }
+
+        });
+    	
+    	Observable<String> observable1 = Observable.create(new OnSubscribe<String>() {
+            @Override
+            public void call(Subscriber<? super String> Observer) {
+            	
+                Observer.onNext("two");
+                Observer.onCompleted();
+            }
+
+        });
+
+        @SuppressWarnings("unchecked")
+        Observer<String> observer = mock(Observer.class);
+
+        Observable<String> source = Observable.concat(observable, observable1);
+        source.subscribe(observer);
+        
+        verify(observer, times(1)).onNext("one");
+        verify(observer, times(1)).onNext("two");
+        verify(observer, never()).onError(any(Throwable.class));
+        verify(observer, times(1)).onCompleted();
     }
 
     @Test
