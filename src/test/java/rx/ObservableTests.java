@@ -882,22 +882,22 @@ public class ObservableTests {
     }
 
     @Test
-            public void testJustWithScheduler() {
-                TestScheduler scheduler = new TestScheduler();
-                Observable<Integer> observable = Observable.from(Arrays.asList(1, 2)).subscribeOn(scheduler);
-        
-                @SuppressWarnings("unchecked")
-                Observer<Integer> observer = mock(Observer.class);
-                observable.subscribe(observer);
-        
-                scheduler.advanceTimeBy(1, TimeUnit.MILLISECONDS);
-        
-                InOrder inOrder = inOrder(observer);
-                inOrder.verify(observer, times(1)).onNext(1);
-                inOrder.verify(observer, times(1)).onNext(2);
-                inOrder.verify(observer, times(1)).onCompleted();
-                inOrder.verifyNoMoreInteractions();
-            }
+    public void testJustWithScheduler() {
+        TestScheduler scheduler = new TestScheduler();
+        Observable<Integer> observable = Observable.from(Arrays.asList(1, 2)).subscribeOn(scheduler);
+
+        @SuppressWarnings("unchecked")
+        Observer<Integer> observer = mock(Observer.class);
+        observable.subscribe(observer);
+
+        scheduler.advanceTimeBy(1, TimeUnit.MILLISECONDS);
+
+        InOrder inOrder = inOrder(observer);
+        inOrder.verify(observer, times(1)).onNext(1);
+        inOrder.verify(observer, times(1)).onNext(2);
+        inOrder.verify(observer, times(1)).onCompleted();
+        inOrder.verifyNoMoreInteractions();
+    }
 
     @Test
     public void testStartWithWithScheduler() {
