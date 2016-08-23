@@ -921,33 +921,32 @@ public class ObservableTests {
     }
     
     @Test
-    public void testTwoAsyncCall() {
+    public void testTwoAsyncCall() throws InterruptedException {
+//    	TestScheduler testScheduler = new TestScheduler();
+    	// 1. source1
     	Observable<String> observable = Observable.create(new OnSubscribe<String>() {
             @Override
             public void call(Subscriber<? super String> Observer) {
-            	
                 Observer.onNext("one");
                 Observer.onCompleted();
             }
-
-
         });
     	
+    	// 2. source2
     	Observable<String> observable1 = Observable.create(new OnSubscribe<String>() {
             @Override
             public void call(Subscriber<? super String> Observer) {
-            	
                 Observer.onNext("two");
                 Observer.onCompleted();
             }
-
         });
-
+    	
+    	// 3. concat sources
+//        Observable<String> source = Observable.concat(observable, observable1); // same as mergeWith
+        Observable<String> observable2 = observable.mergeWith(observable1);
         @SuppressWarnings("unchecked")
         Observer<String> observer = mock(Observer.class);
-
-        Observable<String> source = Observable.concat(observable, observable1);
-        source.subscribe(observer);
+        observable2.subscribe(observer);
         
         verify(observer, times(1)).onNext("one");
         verify(observer, times(1)).onNext("two");
@@ -957,14 +956,18 @@ public class ObservableTests {
 
     @Test
     public void testStartWithWithScheduler() {
-        TestScheduler scheduler = new TestScheduler();
-        Observable<Integer> observable = Observable.just(3, 4).startWith(Arrays.asList(1, 2)).subscribeOn(scheduler);
+    	// here TestSchedulers is not MUST
+//        TestScheduler scheduler = new TestScheduler();
+        Observable<Integer> observable = Observable
+        		.just(3, 4)
+        		.startWith(Arrays.asList(1, 2));
+//        		.subscribeOn(scheduler);
 
         @SuppressWarnings("unchecked")
         Observer<Integer> observer = mock(Observer.class);
         observable.subscribe(observer);
 
-        scheduler.advanceTimeBy(1, TimeUnit.MILLISECONDS);
+//        scheduler.advanceTimeBy(1, TimeUnit.MILLISECONDS);
 
         InOrder inOrder = inOrder(observer);
         inOrder.verify(observer, times(1)).onNext(1);
@@ -999,6 +1002,8 @@ public class ObservableTests {
     @Test
     public void testMergeWith() {
         TestSubscriber<Integer> ts = new TestSubscriber<Integer>();
+        // mergeWith
+        // flatteh two Observable into a single one without any transformation
         Observable.just(1).mergeWith(Observable.just(2)).subscribe(ts);
         ts.assertReceivedOnNext(Arrays.asList(1, 2));
     }
@@ -1017,12 +1022,16 @@ public class ObservableTests {
         ts.assertReceivedOnNext(Arrays.asList(1));
     }
 
-    @Test(expected = OnErrorNotImplementedException.class)
+//    @Test(expected = OnErrorNotImplementedException.class)
+    @Test
+    // without subscribe, error should be cast too
     public void testSubscribeWithoutOnError() {
         Observable<String> o = Observable.just("a", "b").flatMap(new Func1<String, Observable<String>>() {
             @Override
             public Observable<String> call(String s) {
-                return Observable.error(new Exception("test"));
+            	System.out.println("call");
+//                return Observable.error(new Exception("test"));
+            	return null;
             }
         });
         o.subscribe();
@@ -1035,8 +1044,8 @@ public class ObservableTests {
         for (int i = 0;i < expectedCount; i++) {
             Observable
                     .just(Boolean.TRUE, Boolean.FALSE)
-                    .takeWhile(new Func1<Boolean, Boolean>() {
-                        @Override
+                    .takeWhile(new Func1<Boolean, Boolean>() { // emit values if true,
+                        @Override							   // complete if false
                         public Boolean call(Boolean value) {
                             return value;
                         }
@@ -1101,7 +1110,8 @@ public class ObservableTests {
             
             subject.subscribe();
 
-            Observable.error(new RuntimeException("oops"))
+            Observable
+            	.error(new RuntimeException("oops")) // re-show error/exception test
                 .materialize()
                 .delay(1, TimeUnit.SECONDS, s)
                 .dematerialize()
@@ -1126,7 +1136,7 @@ public class ObservableTests {
         assertEquals(Observable.empty(), Observable.empty());
     }
     
-    @Test
+    @Test // test empty is empty, good test theory
     public void testEmptyIsEmpty() {
         Observable.<Integer>empty().subscribe(w);
         
@@ -1186,6 +1196,7 @@ public class ObservableTests {
             fail("Should have thrown IllegalStateException");
         } catch (IllegalStateException ex) {
             // expected
+        	System.out.println(ex);
         }
     }
     
@@ -1210,6 +1221,7 @@ public class ObservableTests {
             fail("Should have thrown IllegalStateException");
         } catch (IllegalArgumentException ex) {
             // expected
+        	System.out.println(ex);
         }
     }
 
